@@ -29,7 +29,7 @@ class ipTV_stream
             $stream['transcode_attributes']['-vcodec'] = 'copy';
         }
         $ffmpegCommand = FFMPEG_PATH . ' -fflags +genpts -async 1 -y -nostdin -hide_banner -loglevel quiet -i "{INPUT}" ';
-        $ffmpegCommand .= implode(' ', self::F6664C80BDe3e9BbE2C12ceB906D5A11($stream['transcode_attributes'])) . ' ';
+        $ffmpegCommand .= implode(' ', self::ParseTranscodeAttributes($stream['transcode_attributes'])) . ' ';
         $ffmpegCommand .= '-strict -2 -mpegts_flags +initial_discontinuity -f mpegts "' . CREATED_CHANNELS . $stream_id . '_{INPUT_MD5}.ts" >/dev/null 2>/dev/null & jobs -p';
         $result = array_diff($stream['stream_source'], $stream['cchannel_rsources']);
         $json_string_data = '';
@@ -233,11 +233,11 @@ class ipTV_stream
             if (!array_key_exists('-vcodec', $stream['stream_info']['transcode_attributes'])) {
                 $stream['stream_info']['transcode_attributes']['-vcodec'] = 'copy';
             }
-            $A7c6258649492b26d77c75c60c793409 = array();
+            $listItems = array();
             foreach ($stream['stream_info']['target_container'] as $container_priority) {
-                $A7c6258649492b26d77c75c60c793409[$container_priority] = "-movflags +faststart -dn {$map} -ignore_unknown {$f2130ba0f82d2308b743977b2ba5eaa9} " . MOVIES_PATH . $stream_id . '.' . $container_priority . ' ';
+                $listItems[$container_priority] = "-movflags +faststart -dn {$map} -ignore_unknown {$f2130ba0f82d2308b743977b2ba5eaa9} " . MOVIES_PATH . $stream_id . '.' . $container_priority . ' ';
             }
-            foreach ($A7c6258649492b26d77c75c60c793409 as $output_key => $cd7bafd64552e6ca58318f09800cbddd) {
+            foreach ($listItems as $output_key => $itemCommand) {
                 if (($output_key == 'mp4')) { 
                     $stream['stream_info']['transcode_attributes']['-scodec'] = 'mov_text';
                 } else if ($output_key == 'mkv') {
@@ -245,8 +245,8 @@ class ipTV_stream
                 } else {
                     $stream['stream_info']['transcode_attributes']['-scodec'] = 'copy';
                 }
-                $command .= implode(' ', self::F6664c80BDe3e9bbe2c12CEb906D5A11($stream['stream_info']['transcode_attributes'])) . ' ';
-                $command .= $cd7bafd64552e6ca58318f09800cbddd;
+                $command .= implode(' ', self::ParseTranscodeAttributes($stream['stream_info']['transcode_attributes'])) . ' ';
+                $command .= $itemCommand;
             }
             
             $command .= ' >/dev/null 2>' . MOVIES_PATH . $stream_id . '.errors & echo $! > ' . MOVIES_PATH . $stream_id . '_.pid';
@@ -260,17 +260,14 @@ class ipTV_stream
             }
         
     }
-    static function CEBeee6A9C20e0da24C41A0247cf1244($stream_id, &$bb1b9dfc97454460e165348212675779, $B71703fbd9f237149967f9ac3c41dc19 = null)
+    static function CEBeee6A9C20e0da24C41A0247cf1244($stream_id, &$bb1b9dfc97454460e165348212675779, $prioritySource = null)
     {
         ++$bb1b9dfc97454460e165348212675779;
         if (file_exists(STREAMS_PATH . $stream_id . '_.pid')) {
             unlink(STREAMS_PATH . $stream_id . '_.pid');
         }
         $stream = array();
-        self::$ipTV_db->query('SELECT * FROM `streams` t1 
-                               INNER JOIN `streams_types` t2 ON t2.type_id = t1.type AND t2.live = 1
-                               LEFT JOIN `transcoding_profiles` t4 ON t1.transcode_profile_id = t4.profile_id 
-                               WHERE t1.direct_source = 0 AND t1.id = \'%d\'', $stream_id);
+        self::$ipTV_db->query('SELECT * FROM `streams` t1 INNER JOIN `streams_types` t2 ON t2.type_id = t1.type AND t2.live = 1 LEFT JOIN `transcoding_profiles` t4 ON t1.transcode_profile_id = t4.profile_id WHERE t1.direct_source = 0 AND t1.id = \'%d\'', $stream_id);
         if (self::$ipTV_db->num_rows() <= 0) {
             return false;
         }
@@ -289,8 +286,8 @@ class ipTV_stream
             $stream_max_analyze = abs(intval(ipTV_lib::$settings['stream_max_analyze']));
             $probesize = abs(intval(ipTV_lib::$settings['probesize']));
         }
-        $d1c5b35a94aa4152ee37c6cfedfb2ec3 = intval($stream_max_analyze / 1000000) + 7;
-        $Fa28e3498375fc4da68f3f818d774249 = "/usr/bin/timeout {$d1c5b35a94aa4152ee37c6cfedfb2ec3}s " . FFPROBE_PATH . " {FETCH_OPTIONS} -probesize {$probesize} -analyzeduration {$stream_max_analyze} {CONCAT} -i \"{STREAM_SOURCE}\" -v quiet -print_format json -show_streams -show_format";
+        $duration = intval($stream_max_analyze / 1000000) + 7;
+        $shellTimeoutCommand = "/usr/bin/timeout {$duration}s " . FFPROBE_PATH . " {FETCH_OPTIONS} -probesize {$probesize} -analyzeduration {$stream_max_analyze} {CONCAT} -i \"{STREAM_SOURCE}\" -v quiet -print_format json -show_streams -show_format";
         $ArgumentsList = array();
         if ($stream['server_info']['parent_id'] == 0) {
             $sources = $stream['stream_info']['type_key'] == 'created_live' ? array(CREATED_CHANNELS . $stream_id . '_.list') : json_decode($stream['stream_info']['stream_source'], true);
@@ -298,9 +295,9 @@ class ipTV_stream
             $sources = array(ipTV_lib::$StreamingServers[$stream['server_info']['parent_id']]['site_url_ip'] . 'streaming/admin_live.php?stream=' . $stream_id . '&password=' . ipTV_lib::$settings['live_streaming_pass'] . '&extension=ts');
         }
         if (count($sources) > 0) {
-            if (empty($B71703fbd9f237149967f9ac3c41dc19)) {
+            if (empty($prioritySource)) {
                 if (ipTV_lib::$settings['priority_backup'] != 1) {
-                     $sources = array($B71703fbd9f237149967f9ac3c41dc19);
+                    $sources = array($prioritySource);
                 }
                 else if (!empty($stream['server_info']['current_source'])) {
                     $k = array_search($stream['server_info']['current_source'], $sources);
@@ -328,7 +325,7 @@ class ipTV_stream
                         $StreamInfo = json_decode(file_get_contents(STREAMS_PATH . md5($stream_source)), true);
                         break;
                     }
-                    $StreamInfo = json_decode(shell_exec(str_replace(array('{FETCH_OPTIONS}', '{CONCAT}', '{STREAM_SOURCE}'), array($ArgumentsList, $stream['stream_info']['type_key'] == 'created_live' && $stream['server_info']['parent_id'] == 0 ? '-safe 0 -f concat' : '', $stream_source), $Fa28e3498375fc4da68f3f818d774249)), true);
+                    $StreamInfo = json_decode(shell_exec(str_replace(array('{FETCH_OPTIONS}', '{CONCAT}', '{STREAM_SOURCE}'), array($ArgumentsList, $stream['stream_info']['type_key'] == 'created_live' && $stream['server_info']['parent_id'] == 0 ? '-safe 0 -f concat' : '', $stream_source), $shellTimeoutCommand)), true);
                     if (!empty($StreamInfo)) {
                         break;
                     }
@@ -385,22 +382,22 @@ class ipTV_stream
                     if (!array_key_exists('-scodec', $stream['stream_info']['transcode_attributes'])) {
                         $stream['stream_info']['transcode_attributes']['-scodec'] = 'copy';
                     }
-                    $A7c6258649492b26d77c75c60c793409 = array();
-                    $A7c6258649492b26d77c75c60c793409['mpegts'][] = '{MAP} -individual_header_trailer 0 -f segment -segment_format mpegts -segment_time ' . ipTV_lib::$SegmentsSettings['seg_time'] . ' -segment_list_size ' . ipTV_lib::$SegmentsSettings['seg_list_size'] . ' -segment_format_options "mpegts_flags=+initial_discontinuity:mpegts_copyts=1" -segment_list_type m3u8 -segment_list_flags +live+delete -segment_list "' . STREAMS_PATH . $stream_id . '_.m3u8" "' . STREAMS_PATH . $stream_id . '_%d.ts" ';
+                    $listItems = array();
+                    $listItems['mpegts'][] = '{MAP} -individual_header_trailer 0 -f segment -segment_format mpegts -segment_time ' . ipTV_lib::$SegmentsSettings['seg_time'] . ' -segment_list_size ' . ipTV_lib::$SegmentsSettings['seg_list_size'] . ' -segment_format_options "mpegts_flags=+initial_discontinuity:mpegts_copyts=1" -segment_list_type m3u8 -segment_list_flags +live+delete -segment_list "' . STREAMS_PATH . $stream_id . '_.m3u8" "' . STREAMS_PATH . $stream_id . '_%d.ts" ';
                     if ($stream['stream_info']['rtmp_output'] == 1) {
-                        $A7c6258649492b26d77c75c60c793409['flv'][] = '{MAP} {AAC_FILTER} -f flv rtmp://127.0.0.1:' . ipTV_lib::$StreamingServers[$stream['server_info']['server_id']]['rtmp_port'] . "/live/{$stream_id} ";
+                        $listItems['flv'][] = '{MAP} {AAC_FILTER} -f flv rtmp://127.0.0.1:' . ipTV_lib::$StreamingServers[$stream['server_info']['server_id']]['rtmp_port'] . "/live/{$stream_id} ";
                     }
                     if (!empty($external_push[SERVER_ID])) {
                         foreach ($external_push[SERVER_ID] as $b202bc9c1c41da94906c398ceb9f3573) {
-                            $A7c6258649492b26d77c75c60c793409['flv'][] = "{MAP} {AAC_FILTER} -f flv \"{$b202bc9c1c41da94906c398ceb9f3573}\" ";
+                            $listItems['flv'][] = "{MAP} {AAC_FILTER} -f flv \"{$b202bc9c1c41da94906c398ceb9f3573}\" ";
                         }
                     }
                     $delay_start_at = 0;
                     if (!($stream['stream_info']['delay_minutes'] > 0 && $stream['server_info']['parent_id'] == 0)) {
-                        foreach ($A7c6258649492b26d77c75c60c793409 as $output_key => $f72c3a34155eca511d79ca3671e1063f) {
-                            foreach ($f72c3a34155eca511d79ca3671e1063f as $cd7bafd64552e6ca58318f09800cbddd) {
-                                $command .= implode(' ', self::f6664c80bde3e9BBe2c12ceb906d5a11($stream['stream_info']['transcode_attributes'])) . ' ';
-                                $command .= $cd7bafd64552e6ca58318f09800cbddd;
+                        foreach ($listItems as $output_key => $f72c3a34155eca511d79ca3671e1063f) {
+                            foreach ($f72c3a34155eca511d79ca3671e1063f as $itemCommand) {
+                                $command .= implode(' ', self::ParseTranscodeAttributes($stream['stream_info']['transcode_attributes'])) . ' ';
+                                $command .= $itemCommand;
                             }
                         }
                     } else {
@@ -423,7 +420,7 @@ class ipTV_stream
                                 copy(DELAY_STREAM . $stream_id . '_.m3u8', DELAY_STREAM . $stream_id . '_.m3u8_old');
                             }
                         }
-                        $command .= implode(' ', self::f6664C80BDe3E9bbe2c12ceB906D5A11($stream['stream_info']['transcode_attributes'])) . ' ';
+                        $command .= implode(' ', self::ParseTranscodeAttributes($stream['stream_info']['transcode_attributes'])) . ' ';
                         $command .= '{MAP} -individual_header_trailer 0 -f segment -segment_format mpegts -segment_time ' . ipTV_lib::$SegmentsSettings['seg_time'] . ' -segment_list_size ' . $stream['stream_info']['delay_minutes'] * 6 . " -segment_start_number {$segment_start_number} -segment_format_options \"mpegts_flags=+initial_discontinuity:mpegts_copyts=1\" -segment_list_type m3u8 -segment_list_flags +live+delete -segment_list \"" . DELAY_STREAM . $stream_id . '_.m3u8" "' . DELAY_STREAM . $stream_id . '_%d.ts" ';
                         $delay_minutes = $stream['stream_info']['delay_minutes'] * 60;
                         if ($segment_start_number > 0) {
@@ -481,32 +478,32 @@ class ipTV_stream
         }
         return $argumentArray;
     }
-    public static function F6664c80bdE3E9BBe2C12CeB906D5a11($transcode_attributes)
+    public static function ParseTranscodeAttributes($transcode_attributes)
     {
-        $e80cbed8655f14b141bd53699dbbdc10 = array();
+        $listAttributes = array();
         foreach ($transcode_attributes as $k => $attribute) {
             if (isset($attribute['cmd'])) {
                 $transcode_attributes[$k] = $attribute = $attribute['cmd'];
             }
             if (preg_match('/-filter_complex "(.*?)"/', $attribute, $matches)) {
                 $transcode_attributes[$k] = trim(str_replace($matches[0], '', $transcode_attributes[$k]));
-                $e80cbed8655f14b141bd53699dbbdc10[] = $matches[1];
+                $listAttributes[] = $matches[1];
             }
         }
-        if (!empty($e80cbed8655f14b141bd53699dbbdc10)) {
-            $transcode_attributes[] = '-filter_complex "' . implode(',', $e80cbed8655f14b141bd53699dbbdc10) . '"';
+        if (!empty($listAttributes)) {
+            $transcode_attributes[] = '-filter_complex "' . implode(',', $listAttributes) . '"';
         }
-        $B54918193a6b3b39c547eb9486c4c2ff = array();
-        foreach ($transcode_attributes as $k => $e7ddd0b219bd2e9b7547185c8bccb6a9) {
+        $parsedAttributes = array();
+        foreach ($transcode_attributes as $k => $attribute) {
             if (is_numeric($k)) {
-                $B54918193a6b3b39c547eb9486c4c2ff[] = $e7ddd0b219bd2e9b7547185c8bccb6a9;
+                $parsedAttributes[] = $attribute;
             } else {
-                $B54918193a6b3b39c547eb9486c4c2ff[] = $k . ' ' . $e7ddd0b219bd2e9b7547185c8bccb6a9;
+                $parsedAttributes[] = $k . ' ' . $attribute;
             }
         }
-        $B54918193a6b3b39c547eb9486c4c2ff = array_filter($B54918193a6b3b39c547eb9486c4c2ff);
-        uasort($B54918193a6b3b39c547eb9486c4c2ff, array(__CLASS__, 'customOrder'));
-        return array_map('trim', array_values(array_filter($B54918193a6b3b39c547eb9486c4c2ff)));
+        $parsedAttributes = array_filter($parsedAttributes);
+        uasort($parsedAttributes, array(__CLASS__, 'customOrder'));
+        return array_map('trim', array_values(array_filter($parsedAttributes)));
     }
     public static function ParseStreamURL($url)
     {

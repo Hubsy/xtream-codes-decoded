@@ -60,7 +60,7 @@ if (is_numeric($d76067cf9572f7a6691c85c12faf2a29) && $d76067cf9572f7a6691c85c12f
                                                     $protocol = strtolower(substr($sourceURL, 0, strpos($sourceURL, '://')));
                                                     $ArgumentsList = implode(' ', ipTV_stream::GetArguments($rows, $protocol, 'fetch'));
                                                     if ($stream_info = ipTV_stream::GetStreamInfo($sourceURL, SERVER_ID, $ArgumentsList)) {
-                                                        $B71703fbd9f237149967f9ac3c41dc19 = $sourceURL;
+                                                        $prioritySource = $sourceURL;
                                                         break;
                                                     }
                                                 }
@@ -71,7 +71,7 @@ if (is_numeric($d76067cf9572f7a6691c85c12faf2a29) && $d76067cf9572f7a6691c85c12f
                                                 if (ipTV_streaming::CheckPidChannelM3U8Exist($pid, $stream_id)) {
                                                     $ecae69bb74394743482337ade627630b = 0;
                                                     if (!($parent_id == 0)) {
-                                                        $B71703fbd9f237149967f9ac3c41dc19 = NULL;
+                                                        $prioritySource = NULL;
                                                         if ($d76067cf9572f7a6691c85c12faf2a29 === false) {
                                                             $source = $streamsSys['current_source'];
                                                             echo 'Checking For PlayList...
@@ -146,11 +146,11 @@ if (is_numeric($d76067cf9572f7a6691c85c12faf2a29) && $d76067cf9572f7a6691c85c12f
                                                                     set_time_limit(0);
                                                                     if (!ipTV_streaming::CheckPidChannelM3U8Exist($pid, $stream_id)) {
                                                                     } else {
-                                                                        $B71703fbd9f237149967f9ac3c41dc19 = NULL;
+                                                                        $prioritySource = NULL;
                                                                         $pid = file_exists(STREAMS_PATH . $stream_id . '_.pid') ? intval(file_get_contents(STREAMS_PATH . $stream_id . '_.pid')) : $streamsSys['pid'];
                                                                         break;
                                                                         $f22b7f23bbbdae3df06477aed82a151c = time();
-                                                                        $d76067cf9572f7a6691c85c12faf2a29 = ipTV_stream::cebEeE6A9c20E0da24C41A0247cF1244($stream_id, $ecae69bb74394743482337ade627630b, $B71703fbd9f237149967f9ac3c41dc19);
+                                                                        $d76067cf9572f7a6691c85c12faf2a29 = ipTV_stream::cebEeE6A9c20E0da24C41A0247cF1244($stream_id, $ecae69bb74394743482337ade627630b, $prioritySource);
                                                                         do {
                                                                         } while ($f647227394deda82f51d6cad920a8c8c != $E58daa5817b41e5a33cecae880e2ee63);
                                                                         die;
