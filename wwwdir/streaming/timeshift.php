@@ -266,11 +266,11 @@ if (!empty($queue)) {
             }
             header("Content-Range: bytes {$start}-{$end}/{$size}");
             header('Content-Length: ' . $length);
-            $b3fcd87510baa9521882b459861dcb64 = 0;
+            $RoundedNumber = 0;
             if ($start > 0) {
-                $b3fcd87510baa9521882b459861dcb64 = floor($start / ($size / count($queue)));
+                $RoundedNumber = floor($start / ($size / count($queue)));
             }
-            $c77e7ff2c5d6b14d931b3344c54e0cc5 = false;
+            $rdCheck = false;
             $offset = 0;
             $total_file_size = 0;
             $total_bitrate = $bitrate * 125;
@@ -288,10 +288,10 @@ if (!empty($queue)) {
             $check_buffer = false;
             foreach ($queue as $k => $item) {
                 $total_file_size += $item['filesize'];
-                if (!$c77e7ff2c5d6b14d931b3344c54e0cc5 && $b3fcd87510baa9521882b459861dcb64 > 0) {
-                    if ($b3fcd87510baa9521882b459861dcb64 > $k) {
+                if (!$rdCheck && $RoundedNumber > 0) {
+                    if ($RoundedNumber > $k) {
                     } else {
-                        $c77e7ff2c5d6b14d931b3344c54e0cc5 = true;
+                        $rdCheck = true;
                         $offset = $start - $total_file_size;
                     }
                 }
