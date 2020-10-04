@@ -163,17 +163,17 @@ class ipTV_streaming
                         foreach ($rows as $server_id => $row) {
                             $rows[$server_id]['capacity'] = $row['online_clients'];
                         }
-                        $D8d3ca7afab93e5c110124dc7611906c = array();
+                        $seversListNetworkSpeed = array();
                         foreach ($StreamSysIds as $server_id) {
-                            $A8897e590149896423cc3c897a6c6651 = json_decode(ipTV_lib::$StreamingServers[$server_id]['server_hardware'], true);
-                            if (!empty($A8897e590149896423cc3c897a6c6651['network_speed'])) {
-                                $D8d3ca7afab93e5c110124dc7611906c[$server_id] = (double) $A8897e590149896423cc3c897a6c6651['network_speed'];
+                            $serverHardware = json_decode(ipTV_lib::$StreamingServers[$server_id]['server_hardware'], true);
+                            if (!empty($serverHardware['network_speed'])) {
+                                $seversListNetworkSpeed[$server_id] = (double) $serverHardware['network_speed'];
                             } else {
-                                $D8d3ca7afab93e5c110124dc7611906c[$server_id] = 1000;
+                                $seversListNetworkSpeed[$server_id] = 1000;
                             }
                         }
                         foreach ($rows as $server_id => $row) {
-                            $rows[$server_id]['capacity'] = (double) ($row['online_clients'] / $D8d3ca7afab93e5c110124dc7611906c[$server_id]);
+                            $rows[$server_id]['capacity'] = (double) ($row['online_clients'] / $seversListNetworkSpeed[$server_id]);
                         }
                         foreach ($rows as $server_id => $row) {
                             $rows[$server_id]['capacity'] = (double) ($row['online_clients'] / ipTV_lib::$StreamingServers[$server_id]['total_clients']);
@@ -268,7 +268,7 @@ class ipTV_streaming
             return false;
         }
     }
-    public static function GetUserInfo($user_id = null, $username = null, $password = null, $get_ChannelIDS = false, $getBouquetInfo = false, $get_cons = false, $type = array(), $B5e1c013996afcec27bf828245c3ec37 = false, $user_ip = '', $user_agent = '', $a8851ef591e0cdd9aad6ec4f7bd4b160 = array(), $play_token = '', $stream_id = 0)
+    public static function GetUserInfo($user_id = null, $username = null, $password = null, $get_ChannelIDS = false, $getBouquetInfo = false, $get_cons = false, $type = array(), $isAdultContent = false, $user_ip = '', $user_agent = '', $paginationParams = array(), $play_token = '', $stream_id = 0)
     {
         if (empty($user_id)) {
             self::$ipTV_db->query('SELECT * FROM `users` WHERE `username` = \'%s\' AND `password` = \'%s\' LIMIT 1', $username, $password);
@@ -288,8 +288,8 @@ class ipTV_streaming
             }
             if ($user_info['is_mag'] == 1 && ipTV_lib::$settings['mag_security'] == 1) {
                 if (!empty($user_info['play_token']) && !empty($play_token)) {
-                    list($token, $B96676565d19827b6e2eda6db94167c0, $cced8089119eaa83c17b19ea19d9af22) = explode(':', $user_info['play_token']);
-                    if (!($token == $play_token && $B96676565d19827b6e2eda6db94167c0 >= time() && $cced8089119eaa83c17b19ea19d9af22 == $stream_id)) {
+                    list($token, $tokenTime, $tokenStreamId) = explode(':', $user_info['play_token']);
+                    if (!($token == $play_token && $tokenTime >= time() && $tokenStreamId == $stream_id)) {
                         $user_info['mag_invalid_token'] = true;
                     }
                 } else {
@@ -356,24 +356,24 @@ class ipTV_streaming
                 }
             }
             if ($get_ChannelIDS) {
-                $Ff48bb3649e5b84524bd8d318c03db3c = $A92229131e0f5177a362478fd6f3bd8d = array();
+                $listChannelIds = $listSeriesIds = array();
                 if (ipTV_lib::$settings['new_sorting_bouquet'] != 1) {
                     sort($user_info['bouquet']);
                 }
                 foreach ($user_info['bouquet'] as $id) {
                     if (isset(ipTV_lib::$Bouquets[$id]['streams'])) {
-                        $Ff48bb3649e5b84524bd8d318c03db3c = array_merge($Ff48bb3649e5b84524bd8d318c03db3c, ipTV_lib::$Bouquets[$id]['streams']);
+                        $listChannelIds = array_merge($listChannelIds, ipTV_lib::$Bouquets[$id]['streams']);
                     }
                     if (isset(ipTV_lib::$Bouquets[$id]['series'])) {
-                        $A92229131e0f5177a362478fd6f3bd8d = array_merge($A92229131e0f5177a362478fd6f3bd8d, ipTV_lib::$Bouquets[$id]['series']);
+                        $listSeriesIds = array_merge($listSeriesIds, ipTV_lib::$Bouquets[$id]['series']);
                     }
                 }
                 if (ipTV_lib::$settings['new_sorting_bouquet'] != 1) {
-                    $user_info['channel_ids'] = array_unique($Ff48bb3649e5b84524bd8d318c03db3c);
-                    $user_info['series_ids'] = array_unique($A92229131e0f5177a362478fd6f3bd8d);
+                    $user_info['channel_ids'] = array_unique($listChannelIds);
+                    $user_info['series_ids'] = array_unique($listSeriesIds);
                 } else {
-                    $user_info['channel_ids'] = array_reverse(array_unique(array_reverse($Ff48bb3649e5b84524bd8d318c03db3c)));
-                    $user_info['series_ids'] = array_reverse(array_unique(array_reverse($A92229131e0f5177a362478fd6f3bd8d)));
+                    $user_info['channel_ids'] = array_reverse(array_unique(array_reverse($listChannelIds)));
+                    $user_info['series_ids'] = array_reverse(array_unique(array_reverse($listSeriesIds)));
                 }
                 if ($getBouquetInfo && !empty($user_info['channel_ids'])) {
                     $user_info['channels'] = array();
@@ -387,16 +387,16 @@ class ipTV_streaming
                     }
                     foreach ($user_info['channel_ids'] as $id) {
                         if (isset($output[$id])) {
-                            if ($B5e1c013996afcec27bf828245c3ec37) {
+                            if ($isAdultContent) {
                                 $output[$id]['is_adult'] = strtolower($output[$id]['category_name']) == 'for adults' ? 1 : 0;
                             }
                             $user_info['channels'][$id] = $output[$id];
                         }
                     }
                     $output = null;
-                    if (!empty($a8851ef591e0cdd9aad6ec4f7bd4b160['items_per_page'])) {
+                    if (!empty($paginationParams['items_per_page'])) {
                         $user_info['total_found_rows'] = count($user_info['channels']);
-                        $user_info['channels'] = array_slice($user_info['channels'], $a8851ef591e0cdd9aad6ec4f7bd4b160['offset'], $a8851ef591e0cdd9aad6ec4f7bd4b160['items_per_page']);
+                        $user_info['channels'] = array_slice($user_info['channels'], $paginationParams['offset'], $paginationParams['items_per_page']);
                     }
                 }
             }
