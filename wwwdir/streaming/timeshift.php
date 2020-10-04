@@ -127,13 +127,13 @@ if (!is_numeric($start)) {
         $month = substr($date, 4, 2);
         $day = substr($date, 6, 2);
         $minutes = 0;
-        $Ed62709841469f20fe0f7a17a4268692 = $job;
+        $hours = $job;
     } else {
         list($date, $job) = explode(':', $start);
         list($year, $month, $day) = explode('-', $date);
-        list($Ed62709841469f20fe0f7a17a4268692, $minutes) = explode('-', $job);
+        list($hours, $minutes) = explode('-', $job);
     }
-    $start_timestamp = mktime($Ed62709841469f20fe0f7a17a4268692, $minutes, 0, $month, $day, $year);
+    $start_timestamp = mktime($hours, $minutes, 0, $month, $day, $year);
 } else {
     $duration *= 24;
     $files = array_values(array_filter(explode('', shell_exec('ls -tr ' . TV_ARCHIVE . $stream_id . ' | sed -e \'s/\\s\\+/\\n/g\''))));

@@ -197,11 +197,11 @@ class ipTV_stream
                 $index++;
             }
 
-            $f2130ba0f82d2308b743977b2ba5eaa9 = '';
+            $commandMovieFiles = '';
             $index = 0;
 
             while ($index < count($movie_subtitles['files'])) {
-                $f2130ba0f82d2308b743977b2ba5eaa9 .= '-map ' . ($index + 1) . " -metadata:s:s:{$index} title={$movie_subtitles['names'][$index]} -metadata:s:s:{$index} language={$movie_subtitles['names'][$index]} ";
+                $commandMovieFiles .= '-map ' . ($index + 1) . " -metadata:s:s:{$index} title={$movie_subtitles['names'][$index]} -metadata:s:s:{$index} language={$movie_subtitles['names'][$index]} ";
                 $index++;
             }
 
@@ -235,7 +235,7 @@ class ipTV_stream
             }
             $listItems = array();
             foreach ($stream['stream_info']['target_container'] as $container_priority) {
-                $listItems[$container_priority] = "-movflags +faststart -dn {$map} -ignore_unknown {$f2130ba0f82d2308b743977b2ba5eaa9} " . MOVIES_PATH . $stream_id . '.' . $container_priority . ' ';
+                $listItems[$container_priority] = "-movflags +faststart -dn {$map} -ignore_unknown {$commandMovieFiles} " . MOVIES_PATH . $stream_id . '.' . $container_priority . ' ';
             }
             foreach ($listItems as $output_key => $itemCommand) {
                 if (($output_key == 'mp4')) { 
@@ -260,9 +260,9 @@ class ipTV_stream
             }
         
     }
-    static function CEBeee6A9C20e0da24C41A0247cf1244($stream_id, &$bb1b9dfc97454460e165348212675779, $prioritySource = null)
+    static function StreamContentData($stream_id, &$takeCache, $prioritySource = null)
     {
-        ++$bb1b9dfc97454460e165348212675779;
+        ++$takeCache;
         if (file_exists(STREAMS_PATH . $stream_id . '_.pid')) {
             unlink(STREAMS_PATH . $stream_id . '_.pid');
         }
@@ -313,7 +313,7 @@ class ipTV_stream
                     }
                 }
 
-                $set = $bb1b9dfc97454460e165348212675779 <= RESTART_TAKE_CACHE ? true : false;
+                $set = $takeCache <= RESTART_TAKE_CACHE ? true : false;
                 if (!$set) {
                     self::($sources);
                 }
@@ -356,9 +356,9 @@ class ipTV_stream
                         $map = '';
                     }
                     if (($stream['stream_info']['gen_timestamps'] == 1 || empty($server_protocol)) && $stream['stream_info']['type_key'] != 'created_live') {
-                        $e9652f3db39531a69b91900690d5d064 = '-fflags +genpts -async 1';
+                        $custom_ffmpeg_command = '-fflags +genpts -async 1';
                     } else {
-                        $e9652f3db39531a69b91900690d5d064 = '-nofix_dts -start_at_zero -copyts -vsync 0 -correct_ts_overflow 0 -avoid_negative_ts disabled -max_interleave_delta 0';
+                        $custom_ffmpeg_command = '-nofix_dts -start_at_zero -copyts -vsync 0 -correct_ts_overflow 0 -avoid_negative_ts disabled -max_interleave_delta 0';
                     }
                     $read_native = '';
                     if ($stream['server_info']['parent_id'] == 0 && ($stream['stream_info']['read_native'] == 1 or stristr($StreamInfo['container'], 'hls') or empty($server_protocol) or stristr($StreamInfo['container'], 'mp4') or stristr($StreamInfo['container'], 'matroska'))) {
@@ -388,14 +388,14 @@ class ipTV_stream
                         $listItems['flv'][] = '{MAP} {AAC_FILTER} -f flv rtmp://127.0.0.1:' . ipTV_lib::$StreamingServers[$stream['server_info']['server_id']]['rtmp_port'] . "/live/{$stream_id} ";
                     }
                     if (!empty($external_push[SERVER_ID])) {
-                        foreach ($external_push[SERVER_ID] as $b202bc9c1c41da94906c398ceb9f3573) {
-                            $listItems['flv'][] = "{MAP} {AAC_FILTER} -f flv \"{$b202bc9c1c41da94906c398ceb9f3573}\" ";
+                        foreach ($external_push[SERVER_ID] as $pushItem) {
+                            $listItems['flv'][] = "{MAP} {AAC_FILTER} -f flv \"{$pushItem}\" ";
                         }
                     }
                     $delay_start_at = 0;
                     if (!($stream['stream_info']['delay_minutes'] > 0 && $stream['server_info']['parent_id'] == 0)) {
-                        foreach ($listItems as $output_key => $f72c3a34155eca511d79ca3671e1063f) {
-                            foreach ($f72c3a34155eca511d79ca3671e1063f as $itemCommand) {
+                        foreach ($listItems as $output_key => $listItemValue) {
+                            foreach ($listItemValue as $itemCommand) {
                                 $command .= implode(' ', self::ParseTranscodeAttributes($stream['stream_info']['transcode_attributes'])) . ' ';
                                 $command .= $itemCommand;
                             }
@@ -431,7 +431,7 @@ class ipTV_stream
                         }
                     }
                     $command .= ' >/dev/null 2>>' . STREAMS_PATH . $stream_id . '.errors & echo $! > ' . STREAMS_PATH . $stream_id . '_.pid';
-                    $command = str_replace(array('{INPUT}', '{FETCH_OPTIONS}', '{GEN_PTS}', '{STREAM_SOURCE}', '{MAP}', '{READ_NATIVE}', '{CONCAT}', '{AAC_FILTER}'), array("\"{$stream_source}\"", empty($stream['stream_info']['custom_ffmpeg']) ? $ArgumentsList : '', empty($stream['stream_info']['custom_ffmpeg']) ? $e9652f3db39531a69b91900690d5d064 : '', $stream_source, empty($stream['stream_info']['custom_ffmpeg']) ? $map : '', empty($stream['stream_info']['custom_ffmpeg']) ? $read_native : '', $stream['stream_info']['type_key'] == 'created_live' && $stream['server_info']['parent_id'] == 0 ? '-safe 0 -f concat' : '', !stristr($StreamInfo['container'], 'flv') && $StreamInfo['codecs']['audio']['codec_name'] == 'aac' && $stream['stream_info']['transcode_attributes']['-acodec'] == 'copy' ? '-bsf:a aac_adtstoasc' : ''), $command);
+                    $command = str_replace(array('{INPUT}', '{FETCH_OPTIONS}', '{GEN_PTS}', '{STREAM_SOURCE}', '{MAP}', '{READ_NATIVE}', '{CONCAT}', '{AAC_FILTER}'), array("\"{$stream_source}\"", empty($stream['stream_info']['custom_ffmpeg']) ? $ArgumentsList : '', empty($stream['stream_info']['custom_ffmpeg']) ? $custom_ffmpeg_command : '', $stream_source, empty($stream['stream_info']['custom_ffmpeg']) ? $map : '', empty($stream['stream_info']['custom_ffmpeg']) ? $read_native : '', $stream['stream_info']['type_key'] == 'created_live' && $stream['server_info']['parent_id'] == 0 ? '-safe 0 -f concat' : '', !stristr($StreamInfo['container'], 'flv') && $StreamInfo['codecs']['audio']['codec_name'] == 'aac' && $stream['stream_info']['transcode_attributes']['-acodec'] == 'copy' ? '-bsf:a aac_adtstoasc' : ''), $command);
                     shell_exec($command);
                     $pid = $pid = intval(file_get_contents(STREAMS_PATH . $stream_id . '_.pid'));
                     if (SERVER_ID == $stream['stream_info']['tv_archive_server_id']) {
@@ -446,7 +446,7 @@ class ipTV_stream
                     
                 } else {
                     $stream['stream_info']['transcode_attributes'] = array();
-                    $command = FFMPEG_PATH . " -y -nostdin -hide_banner -loglevel quiet {$d1006c7cc041221972025137b5112b7d} -progress \"{$progress}\" " . $stream['stream_info']['custom_ffmpeg'];
+                    $command = FFMPEG_PATH . " -y -nostdin -hide_banner -loglevel quiet {$quiet} -progress \"{$progress}\" " . $stream['stream_info']['custom_ffmpeg'];
                 }
             }
         }
